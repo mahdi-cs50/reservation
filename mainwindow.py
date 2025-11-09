@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self.ui.add_record_button.clicked.connect(self.add_finance_record)
         self.ui.add_bank_button.clicked.connect(self.add_bank_record)
         self.ui.update_balances_button.clicked.connect(self.update_balances)
+        self.ui.update_balances_button_income_expense.clicked.connect(self.update_balances)
         self.ui.delete_record_income_expense_button.clicked.connect(self.delete_finance_record)
         self.ui.delete_record_bank_button.clicked.connect(self.delete_bank_record)
 
