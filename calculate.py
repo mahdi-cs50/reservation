@@ -66,52 +66,14 @@ def cal_bank ():
     last_row = cursor1.fetchone()
     if not last_row:
         print("هیچ تراکنشی در جدول وجود ندارد.")
-        return
-    
-    Id, amount, bank_name, target_date_str = last_row
-    target_date = date.fromisoformat(target_date_str)
-    if today >= target_date:
-        cursor2.execute("SELECT Deposit FROM bank WHERE Bank_Name = ?", (bank_name,))
-        bank = cursor2.fetchone()
-        if bank:
-            new_deposit = bank[0] + amount
-            if new_deposit >= 0:
-                cursor2.execute("UPDATE bank SET Deposit = ? WHERE Bank_Name = ?", (new_deposit, bank_name))
-                connect2.commit()
-                cursor1.execute("UPDATE finance SET Done = 1 WHERE Amount = ? AND Date = ? AND Bank_name = ? AND Id = ?", (amount, target_date, bank_name, Id))
-                connect1.commit()
-                QMessageBox.information(None, "تغییر موجودی" ,f"موجودی {bank_name} به {new_deposit} در تاریخ {target_date} تغییر یافت")
-            else:
-                cursor1.execute("DELETE FROM finance WHERE Id = (SELECT Id FROM finance ORDER BY Id DESC LIMIT 1)")
-                connect1.commit()
-                QMessageBox.warning(None, "هشدار موجودی" ,"موجودی حساب کافی نیست")
-        else:
-            cursor1.execute("DELETE FROM finance WHERE Id = ?", (Id,))
-            connect1.commit()
-            QMessageBox.warning(None, "هشدار حساب", "بانک وجود ندارد")
+        cursor1.execute(""" SELECT Id FROM finance WHERE Id = (SELECT MAX(Id) FROM finance)""")
+        row = cursor1.fetchone()
+        cursor1.execute("DELETE FROM finance WHERE Id = ?", (row[0],))
+        connect1.commit()
+        QMessageBox.warning(None, "خطا", "تراکنش ثبت نشد.")
     else:
-        if amount < 0:
-            QMessageBox.information(None, "هزینه جاری", f"هزینه با مقدار {abs(amount)} در بانک {bank_name} به معوقات در تاریخ {target_date} اضافه شد.")
-        else:
-            QMessageBox.information(None, "درآمد جاری", f"درآمد با مقدار {amount} در بانک {bank_name} به معوقات در تاریخ {target_date} اضافه شد.")
-    check_income_expense()
-
-
-def check_income_expense():
-    from datetime import date
-
-    cursor1.execute("SELECT Id, Amount, Bank_Name, Date FROM finance WHERE Done = 0")
-    rows = cursor1.fetchall()
-    if not rows:
-        print("هیچ تراکنشی برای آپدیت در جدول وجود ندارد.")
-
-    today = date.today()
-
-    printed = False
-    for row in rows:
-        Id, amount, bank_name, target_date_str = row
+        Id, amount, bank_name, target_date_str = last_row
         target_date = date.fromisoformat(target_date_str)
-
         if today >= target_date:
             cursor2.execute("SELECT Deposit FROM bank WHERE Bank_Name = ?", (bank_name,))
             bank = cursor2.fetchone()
@@ -122,17 +84,59 @@ def check_income_expense():
                     connect2.commit()
                     cursor1.execute("UPDATE finance SET Done = 1 WHERE Amount = ? AND Date = ? AND Bank_name = ? AND Id = ?", (amount, target_date, bank_name, Id))
                     connect1.commit()
-                    QMessageBox.information(None, "درآمد جاری", f"موجودی {bank_name} به {new_deposit} در تاریخ {target_date} تغییر یافت")
+                    QMessageBox.information(None, "تغییر موجودی" ,f"موجودی {bank_name} به {new_deposit} در تاریخ {target_date} تغییر یافت")
                 else:
-                    cursor1.execute("DELETE FROM finance WHERE Id = ?", (Id,))
+                    cursor1.execute("DELETE FROM finance WHERE Id = (SELECT Id FROM finance ORDER BY Id DESC LIMIT 1)")
                     connect1.commit()
-                    QMessageBox.warning(None, "هشدار", "موجودی حساب کافی نیست")
+                    QMessageBox.warning(None, "هشدار موجودی" ,"موجودی حساب کافی نیست")
             else:
-                print("بانک وجود ندارد")
-        #else:
-            #if not printed:
-                #print("تغییری در حساب داده نشد")
-                #printed = True
+                cursor1.execute("DELETE FROM finance WHERE Id = ?", (Id,))
+                connect1.commit()
+                QMessageBox.warning(None, "هشدار حساب", "بانک وجود ندارد")
+        else:
+            if amount < 0:
+                QMessageBox.information(None, "هزینه جاری", f"هزینه با مقدار {abs(amount)} در بانک {bank_name} به معوقات در تاریخ {target_date} اضافه شد.")
+            else:
+                QMessageBox.information(None, "درآمد جاری", f"درآمد با مقدار {amount} در بانک {bank_name} به معوقات در تاریخ {target_date} اضافه شد.")
+    check_income_expense()
+
+
+def check_income_expense():
+    from datetime import date
+
+    cursor1.execute("SELECT Id, Amount, Bank_Name, Date FROM finance WHERE Done = 0")
+    rows = cursor1.fetchall()
+    if not rows:
+        print("هیچ تراکنشی برای آپدیت در جدول وجود ندارد.")
+    else:
+        today = date.today()
+
+        printed = False
+        for row in rows:
+            Id, amount, bank_name, target_date_str = row
+            target_date = date.fromisoformat(target_date_str)
+
+            if today >= target_date:
+                cursor2.execute("SELECT Deposit FROM bank WHERE Bank_Name = ?", (bank_name,))
+                bank = cursor2.fetchone()
+                if bank:
+                    new_deposit = bank[0] + amount
+                    if new_deposit >= 0:
+                        cursor2.execute("UPDATE bank SET Deposit = ? WHERE Bank_Name = ?", (new_deposit, bank_name))
+                        connect2.commit()
+                        cursor1.execute("UPDATE finance SET Done = 1 WHERE Amount = ? AND Date = ? AND Bank_name = ? AND Id = ?", (amount, target_date, bank_name, Id))
+                        connect1.commit()
+                        QMessageBox.information(None, "درآمد جاری", f"موجودی {bank_name} به {new_deposit} در تاریخ {target_date} تغییر یافت")
+                    else:
+                        cursor1.execute("DELETE FROM finance WHERE Id = ?", (Id,))
+                        connect1.commit()
+                        QMessageBox.warning(None, "هشدار", "موجودی حساب کافی نیست")
+                else:
+                    print("بانک وجود ندارد")
+            #else:
+                #if not printed:
+                    #print("تغییری در حساب داده نشد")
+                    #printed = True
             
 
 
