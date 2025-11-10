@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
             for bank in banks:
                 self.ui.bank_choose_field.addItem(bank[0])
         except Exception as e:
-            print("خطا در بارگذاری بانک‌ها:", e)
+            print("Error loading banks:", e)
 
     def load_finance_data(self):
         try:
@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
             model = SQLiteTableModel(rows, headers)
             self.ui.sql_tableview.setModel(model)
         except Exception as e:
-            print("خطا در بارگذاری database.db:", e)
+            print("Error loading database.db:", e)
 
     def add_finance_record(self):
         amount_pattern = re.compile(r'^-?\d+(\.\d+)?$')
@@ -118,15 +118,15 @@ class MainWindow(QMainWindow):
         necessity = 1 if self.ui.necessity_choose_field.currentText() == "Yes" else 0
 
         if not amount or not bank:
-            QMessageBox.warning(self, "خطا", "لطفاً همه فیلدها را پر کنید.")
+            QMessageBox.warning(self, "Error", "Please fill in all fields.")
             return
         if not amount_pattern.match(amount):
-            QMessageBox.warning(self, "warning", "Invalid amount format!")
+            QMessageBox.warning(self, "warning", "Invalid amount format! Please enter a number.")
             return
         try:
             amount = float(amount)
         except ValueError:
-            QMessageBox.warning(self, "خطا", "مبلغ را به عدد وارد کنید.")
+            QMessageBox.warning(self, "Error", "Please enter the amount as a number.")
             return
         if amount == 0:
             QMessageBox.warning(self, "warning", "Amount cannot be zero.")
@@ -148,7 +148,7 @@ class MainWindow(QMainWindow):
             self.update_summary()
 
         except Exception as e:
-            QMessageBox.critical(self, "خطا در درج داده", str(e))
+            QMessageBox.critical(self, "Database Error", str(e))
 
     def delete_finance_record(self):
         amount_text = self.ui.amount_entry_field.text().strip()
@@ -156,13 +156,13 @@ class MainWindow(QMainWindow):
         date = self.ui.date_selector_income_expense.date().toString("yyyy-MM-dd")
 
         if not amount_text or not bank:
-            QMessageBox.warning(self, "خطا", "برای حذف رکورد، لطفاً بانک، مبلغ و تاریخ را وارد کنید.")
+            QMessageBox.warning(self, "Error", "To delete a record, please enter the bank, amount, and date.")
             return
 
         try:
             amount = float(amount_text)
         except ValueError:
-            QMessageBox.warning(self, "خطا", "مبلغ باید عدد باشد.")
+            QMessageBox.warning(self, "Error", "Amount must be a number.")
             return
 
         try:
@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
             record = cur.fetchone()
 
             if not record:
-                QMessageBox.warning(self, "یافت نشد", "هیچ رکوردی با این مشخصات پیدا نشد.")
+                QMessageBox.warning(self, "Not Found", "No record with these details was found.")
                 conn.close()
                 return
 
@@ -191,15 +191,15 @@ class MainWindow(QMainWindow):
                 import calculate
                 if hasattr(calculate, "undo_finance_effects"):
                     calculate.undo_finance_effects(bank, amount)
-                QMessageBox.information(self, "حذف موفق", "رکورد حذف شد و تغییرات بانکی بازگردانده شد.")
+                QMessageBox.information(self, "Deleted", "Record deleted and bank changes have been reverted.")
             else:
-                QMessageBox.information(self, "حذف موفق", "رکورد حذف شد (هنوز اعمال نشده بود).")
+                QMessageBox.information(self, "Deleted", "Record deleted (it was not applied).")
 
             self.load_finance_data()
             self.update_summary()
 
         except Exception as e:
-            QMessageBox.critical(self, "خطا در حذف رکورد", str(e))
+            QMessageBox.critical(self, "Error deleting record", str(e))
 
 
 
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
             days = None
 
         if not name or not deposit:
-            QMessageBox.warning(self, "خطا", "نام بانک و مبلغ سپرده و الزامی است.")
+            QMessageBox.warning(self, "Error", "Bank name and deposit amount are required.")
             return
         if not bank_pattern.match(name):
             QMessageBox.warning(self, "warning", "Bank name can only contain letters and spaces.")
@@ -258,7 +258,7 @@ class MainWindow(QMainWindow):
         try:
             deposit = float(deposit)
         except ValueError:
-            QMessageBox.warning(self, "خطا", "لطفاً مبلغ سپرده را به عدد وارد کنید.")
+            QMessageBox.warning(self, "Error", "Please enter the deposit amount as a number.")
             return
         if deposit <= 0:
             QMessageBox.warning(self, "warning", "Amount must be greater than zero.")
@@ -281,13 +281,13 @@ class MainWindow(QMainWindow):
             self.update_summary()
 
         except Exception as e:
-            QMessageBox.critical(self, "خطا در ثبت بانک", str(e))
+            QMessageBox.critical(self, "Error adding bank", str(e))
 
     def delete_bank_record(self):
         name = self.ui.bank_name_entry_field.text().strip()
 
         if not name:
-            QMessageBox.warning(self, "خطا", "لطفاً نام بانک را وارد یا انتخاب کنید.")
+            QMessageBox.warning(self, "Error", "Please enter or select the bank name.")
             return
 
         try:
@@ -301,7 +301,7 @@ class MainWindow(QMainWindow):
             bank_record = cur_bank.fetchone()
 
             if not bank_record:
-                QMessageBox.warning(self, "یافت نشد", f"بانکی با نام «{name}» در پایگاه داده وجود ندارد.")
+                QMessageBox.warning(self, "Not Found", f"No bank named \"{name}\" exists in the database.")
                 conn_bank.close()
                 conn_finance.close()
                 return
@@ -309,13 +309,13 @@ class MainWindow(QMainWindow):
             cur_finance.execute("SELECT COUNT(*) FROM finance WHERE Bank_Name = ?", (name,))
             finance_count = cur_finance.fetchone()[0]
 
-            msg = f"آیا از حذف بانک «{name}» مطمئن هستید؟"
+            msg = f"Are you sure you want to delete the bank \"{name}\"?"
             if finance_count > 0:
-                msg += f"\n\n⚠️ هشدار: {finance_count} تراکنش مرتبط در جدول مالی نیز حذف خواهند شد."
+                msg += f"\n\n⚠️ Warning: {finance_count} related transaction(s) in the finance table will also be deleted."
 
             confirm = QMessageBox.question(
                 self,
-                "تأیید حذف بانک",
+                "Confirm Delete Bank",
                 msg,
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No
@@ -338,10 +338,10 @@ class MainWindow(QMainWindow):
 
             QMessageBox.information(
                 self,
-                "حذف موفق",
-                f"بانک «{name}» و تمام تراکنش‌های مرتبط با آن با موفقیت حذف شدند."
+                "Deleted",
+                f"Bank \"{name}\" and all related transactions have been successfully deleted."
                 if finance_count > 0
-                else f"بانک «{name}» با موفقیت حذف شد."
+                else f"Bank \"{name}\" has been deleted successfully."
             )
 
             self.load_bank_data()
@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
             self.clear_bank_inputs()
 
         except Exception as e:
-            QMessageBox.critical(self, "خطا در حذف بانک", str(e))
+            QMessageBox.critical(self, "Error deleting bank", str(e))
 
 
 
@@ -367,7 +367,7 @@ class MainWindow(QMainWindow):
             model = SQLiteTableModel(rows, headers)
             self.ui.bank_account_tableView.setModel(model)
         except Exception as e:
-            print("خطا در بارگذاری banks.db:", e)
+            print("Error loading banks.db:", e)
 
     def clear_bank_inputs(self):
         self.ui.bank_name_entry_field.clear()
@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
             self.ui.total_unnecessary_spendingnumber_holder.setText(f"{total_unnecessary_expense:,.0f} تومان")
             self.ui.total_spending_number_holder.setText(f"{total_expense:,.0f} تومان")
         except Exception as e:
-            print("خطا در به‌روزرسانی صفحه Summary:", e)
+            print("Error updating Summary page:", e)
 
 
 
@@ -408,9 +408,9 @@ class MainWindow(QMainWindow):
             self.load_bank_data()
             self.load_finance_data()
             self.update_summary()
-            QMessageBox.information(self, "به‌روزرسانی انجام شد", "وضعیت حساب‌ها و تراکنش‌ها با موفقیت بررسی و به‌روزرسانی شد.")
+            QMessageBox.information(self, "Update Complete", "Accounts and transactions have been checked and updated successfully.")
         except Exception as e:
-            QMessageBox.critical(self, "خطا در به‌روزرسانی", str(e))
+            QMessageBox.critical(self, "Error updating", str(e))
 
     def start_daily_check(self):
         self.run_daily_check(initial=True)
@@ -432,12 +432,12 @@ class MainWindow(QMainWindow):
             self.update_summary()
 
             if initial:
-                print(f"[{datetime.datetime.now()}] بررسی اولیه انجام شد (هنگام باز شدن برنامه).")
+                print(f"[{datetime.datetime.now()}] Initial check completed (on startup).")
             else:
-                print(f"[{datetime.datetime.now()}] بررسی روزانه در نیمه‌شب انجام شد.")
+                print(f"[{datetime.datetime.now()}] Daily midnight check completed.")
 
         except Exception as e:
-            print("خطا در بررسی تراکنش‌ها:", e)
+            print("Error checking transactions:", e)
 
         if not initial:
             QTimer.singleShot(24 * 3600 * 1000, self.run_daily_check)
